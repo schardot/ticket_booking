@@ -1,0 +1,85 @@
+package main
+
+import (
+	"database/sql"
+	"fmt"
+	_ "github.com/mattn/go-sqlite3"
+	"html/template"
+	"log"
+	"net/http"
+)
+
+func main() {
+	db, err := sql.Open("sqlite3", "./bookings.db")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	createTable := `
+	CREATE TABLE IF NOT EXISTS bookings (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		first_name TEXT NOT NULL,
+		last_name TEXT NOT NULL,
+		email TEXT NOT NULL UNIQUE,
+		tickets INTEGER NOT NULL,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);
+	`
+
+	_, err = db.Exec(createTable)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	eventName := "Conference"
+	const eventTickets = 50
+	var remainingTickets uint = 50
+	var bookings []string
+	var emails []string
+	i := 0
+
+	fmt.Printf("Welcome to %v booking application\n", eventName)
+	fmt.Printf("There are %v tickets available\n", remainingTickets)
+	fmt.Println("Get your ticket here!")
+
+	for remainingTickets > 0 {
+		name, email, tickets := getUserInfo(remainingTickets)
+		fmt.Printf("Transaction id: %v\n", i)
+		remainingTickets = -tickets
+		bookings = append(bookings, name)
+		emails = append(emails, email)
+		i++
+	}
+	fmt.Println(bookings)
+	fmt.Println(emails)
+}
+
+func getUserInfo(remainingTickets uint) (string, string, uint) {
+	var firstName string
+	var lastName string
+	var email string
+	var userTickets uint
+
+	fmt.Println("Insert first name:")
+	fmt.Scan(&firstName)
+
+	fmt.Println("Insert last name:")
+	fmt.Scan(&lastName)
+
+	fmt.Println("Insert e-mail address:")
+	fmt.Scan(&email)
+
+	fmt.Println("Insert ticket amount:")
+	fmt.Scan(&userTickets)
+
+	if remainingTickets < userTickets {
+		fmt.Printf("Only %v tickets remaining, try again\n", remainingTickets)
+		return "", "", 0
+	}
+	if userTickets == 0 {
+		return "", "", 0
+	}
+	fmt.Printf("Thank you %v %v for booking %v tickets. A confirmation e-mail will be sent to %v \n", firstName, lastName, userTickets, email)
+	return firstName + " " + lastName, email, userTickets
+}
